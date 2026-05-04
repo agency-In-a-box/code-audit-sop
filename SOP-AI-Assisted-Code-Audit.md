@@ -1,8 +1,8 @@
 # SOP: AI-Assisted Code Audit
 
-**Version:** 1.4.0
+**Version:** 1.4.1
 **Created:** December 2, 2025
-**Updated:** March 23, 2026
+**Updated:** May 4, 2026
 
 > **Related Documents:**
 > - **Persona:** See "SOP-Senior-Developer-Persona.md" for the Senior Technical Architect system prompt that operationalizes this audit framework.
@@ -50,6 +50,8 @@ npm run check || npx tsc --noEmit 2>&1 | grep -c "error TS"
 # === SECURITY CHECKS ===
 grep -r "password\|secret\|key\|token" src/ --exclude-dir=node_modules
 npm audit || yarn audit || pnpm audit
+# Shell-execution surfaces (potential shell-injection via child_process)
+grep -rnE "from ['\"]child_process|require\(['\"]child_process|shell:\s*true|\bexec(Sync)?\(" src/ --include="*.ts" --include="*.js" | wc -l
 # Git history secret scan (requires git-secrets or trufflehog)
 git log --all --diff-filter=A --name-only --pretty=format: | grep -iE "\.env$|\.pem$|\.key$|id_rsa" | head -20
 
@@ -220,6 +222,7 @@ Review the attached source files and provide a detailed technical report coverin
    - Accessibility scanning in CI (axe-core, pa11y, etc.)
    - Visual regression testing (if applicable)
    - Docker image optimization (multi-stage builds, image size, .dockerignore)
+   - Forward-hygiene CI guards (allowlists with per-entry justifications) for new oversize files, new `child_process` shell surfaces, new `any`/`@ts-nocheck`, etc. Locks current good state instead of relying on review vigilance.
 
 5. **Architecture & Design Patterns**
    - Code organization and modularity assessment
@@ -278,6 +281,7 @@ Review the attached source files and provide a detailed technical report coverin
     - npm package configuration security (files field, registry config)
     - License compliance (copyleft license contamination risk)
     - Git history hygiene (secrets in commits, large binary files)
+    - Shell-execution surfaces (`child_process` `exec`/`execSync`, `{ shell: true }` spawn options) — prefer array-arg `spawn`/`execFile`; allowlist remaining surfaces with inline justification
 
 11. **API & Network Resilience** (NEW in 1.4.0)
     - Timeout configuration on all HTTP calls (fetch, axios, etc.)
@@ -378,6 +382,7 @@ Conduct a security-focused code review. Identify:
 8. Content Security Policy compliance
 9. License compliance risk (copyleft contamination)
 10. Sensitive data in logs or error messages
+11. Shell-injection surfaces (`exec`/`execSync`/`{ shell: true }` in `child_process`)
 
 Rate security posture: X/10
 List critical vulnerabilities requiring immediate attention.
@@ -566,6 +571,7 @@ After running the audit, compile:
 - No copyleft license contamination in production dependencies
 - No secrets in git history
 - Sensitive data scrubbed from logs
+- No new `exec`/`execSync` or `{ shell: true }` in production code without allowlisted, justified entries
 
 ### Performance
 - Initial page load under 3 seconds
@@ -739,6 +745,14 @@ grep -rn "AbortController\|signal:" src/ --include="*.ts" --include="*.js" | wc 
 
 # Dockerfile lint (NEW in 1.4.0)
 npx dockerfilelint Dockerfile 2>/dev/null || echo "Install: npm install -g dockerfilelint"
+
+# Shell-execution surfaces (NEW in 1.4.1) — shell-injection vector
+echo "child_process imports + shell:true + exec()/execSync():"
+grep -rnE "from ['\"]child_process|require\(['\"]child_process|shell:\s*true|\bexec(Sync)?\(" src/ --include="*.ts" --include="*.js" | wc -l
+
+# Forward-hygiene guards present? (NEW in 1.4.1)
+# Look for CI scripts that pin current good state with allowlists.
+grep -rnE "ALLOWLIST|allowlist" scripts/ --include="*.mjs" --include="*.js" --include="*.ts" 2>/dev/null | head -20
 ```
 
 ---
@@ -752,3 +766,4 @@ npx dockerfilelint Dockerfile 2>/dev/null || echo "Install: npm install -g docke
 | 1.2.0 | Feb 2026 | Added TypeScript/compilation health checks, development environment assessment, SvelteKit-specific analysis, enhanced risk matrix with compilation errors and dev environment failures |
 | 1.3.0 | Feb 2026 | Added parallel agent strategy, finding ID convention, delta audit variation, security as dedicated category (#10), memory safety metrics (addEventListener ratio), dark mode/theme coverage, design token adoption rate, accessibility media query checks, CSS framework-specific analysis, enhanced command templates, accessibility success criteria, pricing for delta audits, tips for parallel execution and previous audit inclusion |
 | 1.4.0 | Mar 2026 | Added API & network resilience audit (#11), observability & logging audit (#12), internationalization assessment (#13), asset optimization audit (#14). Added license compliance checks (copyleft contamination), git hygiene analysis (secrets in history, large files), dead code/unused export detection, code complexity metrics, environment variable validation, Docker/container analysis commands, i18n readiness prompt variation, observability assessment prompt variation. Expanded framework-specific analysis for GraphQL, Python, and Go. Added 5th parallel agent for infrastructure & resilience. New finding ID prefixes: API-N, OBS-N, I18N-N, ASSET-N, LIC-N, GIT-N. Added success criteria for observability, API resilience. Multi-language support in pre-analysis commands (Python, Go, Rust). Enhanced security section with license compliance, git history hygiene, log scrubbing. |
+| 1.4.1 | May 2026 | Added shell-execution surface checks (`child_process` `exec`/`execSync`, `{ shell: true }`) to Section 10 Security Posture, Security-Focused Audit prompt, and Security success criteria. Added forward-hygiene CI guard pattern (allowlists with per-entry justifications) to Section 4 Build & DevOps as a maturity signal distinct from one-shot detection. New pre-analysis grep for shell-injection surfaces and a probe for existing allowlist-style guards in `scripts/`. |
