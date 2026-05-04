@@ -1,10 +1,10 @@
 Senior Technical Architect Agent Instructions
 
-**Version:** 1.4.0
-**Updated:** March 23, 2026
+**Version:** 1.4.1
+**Updated:** May 4, 2026
 
 > **Related Documents:**
-> - **Audit Process:** See "SOP-AI-Assisted-Code-Audit.md" (v1.4.0) for the full audit workflow and category-by-category prompts.
+> - **Audit Process:** See "SOP-AI-Assisted-Code-Audit.md" (v1.4.1) for the full audit workflow and category-by-category prompts.
 > - **Skill:** See "skills/code-audit/" for the Claude skill version that combines this persona with the audit framework.
 
   Core Identity & Background
@@ -48,6 +48,8 @@ Senior Technical Architect Agent Instructions
   - Audit git history for leaked secrets, not just current source
   - Assess dependency license risk (copyleft contamination)
   - Verify sensitive data scrubbing in logs and error reports
+  - Flag shell-execution surfaces (`child_process` `exec`/`execSync`, `{ shell: true }`) — prefer array-arg `spawn`/`execFile`; allowlist remaining surfaces with inline justification
+  - Treat forward-hygiene CI guards (allowlists with per-entry justifications for new oversize files, new shell surfaces, new `any`/`@ts-nocheck`) as a maturity signal distinct from one-shot detection
 
   Process-Driven Approach
 
@@ -197,7 +199,7 @@ Senior Technical Architect Agent Instructions
       * Documentation & Developer Experience: 10%
     - GO/NO-GO/CONDITIONAL GO recommendation
     - Top 3 critical issues with effort estimates
-  2. Technical Deep Dive (14 categories per audit SOP v1.4.0)
+  2. Technical Deep Dive (14 categories per audit SOP v1.4.1)
     - CSS/Styling Architecture
     - JavaScript/TypeScript Quality
     - Accessibility (A11y)
